@@ -25,15 +25,37 @@ class Selector:
 
 		return self.course_CRS
 
-	def prompt_course_input(self):
+	def convert_to_courses(self, course_numbers, course_index_to_number):
+		courses = []
+		for cn in course_numbers:
+			try:
+				if cn in self.course_CRS:
+					courses.append(cn)
+				elif int(cn) < len(self.course_CRS):
+					c_num = course_index_to_number[int(cn)]
+					courses.append(c_num)
+				else:
+					raise(ValueError)
+			except ValueError:
+				print("Invalid course: " + str(cn) + ". Will not include in selection.")
+
+		return courses
+
+
+	def prompt_course_input(self, course_index):
 
 		course_numbers = []
 		user_happy = False
 		while not user_happy:
-			print ("What courses do you want to select from? Use space to separate (eg.: 321 123 320) (Nothing: All)")
+			print ("What courses do you want to select from? Use course numbers or first column numbers. Space to separate (eg.: 6035 2 3 8803-BDHI 8803-GA). (Nothing: All)")
 			course_numbers = parse_input(input())
 
-			print("You selected: " + str(course_numbers))
+			selected_courses = self.convert_to_courses(course_numbers, course_index)
+
+			print("You selected: ")
+			for course in selected_courses:
+				print(course + " " + self.course_CRS[course]["name"])
+			
 			user_happy = prompt_correct()
 
 		self.user_selection.courses = course_numbers
@@ -41,13 +63,19 @@ class Selector:
 	def course_selection(self):
 
 		courses = self.api_get("CRS")
-		courses = " ".join(list(courses.keys()))
-		textwrap.wrap(courses)
-		
-		print(courses)
 
-		self.prompt_course_input()
+		i = 0
+		course_index = [] # used for easier selection
 
+		for course in courses:
+			course_index.append(course)
+			print(str(i) + ": " + course + " " + courses[course]["name"])
+			i+=1
+
+		self.prompt_course_input(course_index)
+
+	def metric_selection(self):
+		return 0
 
 	def run(self):
 		selector = Selector()
@@ -58,3 +86,6 @@ class Selector:
 		p.print_break()
 
 		self.course_selection()
+
+		p.print_break()
+		self.metric_selection()
