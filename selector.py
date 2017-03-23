@@ -6,6 +6,8 @@ import operator
 import json
 import os
 import time
+from os import listdir
+from os.path import isfile, join
 
 from util import *
 
@@ -17,6 +19,13 @@ class UserSelection:
 		self.weights = [] # Weights of each metrics (sums to 1)
 		self.results = {}
 		self.save_directory = "tmp"
+
+	def reset(self):
+		self.courses = {} # Empty == All Courses
+		self.metrics = [] # Empty == All metrics
+		self.include_grades = False
+		self.weights = [] # Weights of each metrics (sums to 1)
+		self.results = {}
 
 	def save_results(self):
 		if not os.path.exists(self.save_directory):
@@ -31,7 +40,7 @@ class UserSelection:
 			"results":self.results
 		}
 
-		timestr = time.strftime("%Y%m%d-%H%M%S")
+		timestr = time.strftime("%Y-%m-%d-%H%M%S")
 		filename = self.save_directory +"/" + "results_" + timestr
 
 		with open(filename, 'w') as outfile:
@@ -44,7 +53,7 @@ class UserSelection:
 
 		for course in self.results:
 
-			for i in range(0, len(self.results[course])):
+			for i in range(0, len(self.metrics)):
 				rew = self.results[course][i]
 
 				if(rew == None):
@@ -52,6 +61,7 @@ class UserSelection:
 				else:
 					tot_results[i] += rew
 					cnt_results[i] += 1
+
 
 		return [tot_results[i]/cnt_results[i] for i in range(0, len(tot_results))]
 
@@ -105,11 +115,22 @@ class UserSelection:
 			print( r_format.format(self.courses[course][0:15] + ":" + course, *row) )
 
 	def load_results(self, file):
-		with open(filename) as infile:
+		# 		data = {
+		# 	"courses":self.courses,
+		# 	"metrics":self.metrics,
+		# 	"includes_grades":self.include_grades,
+		# 	"weights":self.weights,
+		# 	"results":self.results
+		# }
+
+		path = self.save_directory + "/" + file
+		with open(path) as infile:
 			data = json.load(infile)
-
-
-
+			self.courses = data["courses"]
+			self.metrics = data["metrics"]
+			self.includes_grades = data["includes_grades"]
+			self.weights = data["weights"]
+			self.results = data["results"]
 
 class Selector:
 
@@ -142,7 +163,8 @@ class Selector:
 		return courses
 
 	def prompt_course_input(self, course_index):
-		course_numbers = []
+
+		selected_courses = []
 		user_happy = False
 		while not user_happy:
 			print ("What courses do you want to select from? Use course numbers or first column numbers. Space to separate (eg. 6035 2 3 8803-BDHI 8803-GA). (Enter: All)")
@@ -153,7 +175,7 @@ class Selector:
 			print("You selected: ")
 			if(len(selected_courses) == 0):
 				print("All")
-				course_numbers = list(self.course_CRS.keys())
+				selected_courses = list(self.course_CRS.keys())
 			else:
 				for course in selected_courses:
 					print(course + " " + self.course_CRS[course]["name"])
@@ -162,7 +184,7 @@ class Selector:
 
 		# Include names
 		user_selection_courses = {}
-		for course in course_numbers:
+		for course in selected_courses:
 			user_selection_courses[course] = self.course_CRS[course]["name"]
 
 		self.user_selection.courses = user_selection_courses
@@ -235,7 +257,7 @@ class Selector:
 		no = set(['no','n'])
 
 		while(1):
-			choice = input("Would you like to include grade information? (Courses with higher average grades score better). [y]/n").lower()
+			choice = input("Would you like to include grade information? (Courses with higher average grades score better). [y]/n:").lower()
 
 			if choice in no:
 				return
@@ -432,6 +454,26 @@ class Selector:
 
 		self.user_selection.results = results
 
+	def view_results(self, path="tmp/"):
+
+		onlyfiles = [f for f in listdir(path) if isfile(join(path, f))]
+		print(onlyfiles)
+
+		for i in range(0, len(onlyfiles)):
+			print(str(i) + ": " +onlyfiles[i])
+
+		file_index = input("Select number representing file:")
+
+		try:
+			file_index = int(file_index)
+			self.user_selection.load_results(onlyfiles[file_index])
+			# self.generate_results() # TODO: ERROR. Dependency here between load results and print results.
+			self.user_selection.print_results()
+		except ValueError:
+			print("Invalid choice")
+		except IndexError:
+			print("Invalid choice. Value not in range.")
+
 	def run(self):
 
 		p.print_break()
@@ -439,15 +481,29 @@ class Selector:
 		print ("All data is pulled from here: https://omscentral.com/")
 		p.print_break()
 
-		self.course_selection()
-		p.print_break()
-		self.metric_selection()
-		p.print_break()
-		self.grade_selection()
-		p.print_break()
-		self.weight_selection()
-		p.print_break()
-		self.generate_results()
-		self.user_selection.print_results()
-		self.user_selection.save_results()
+		yes = set(['yes','y', 'ye'])
+		no = set(['no','n', ''])
+
+		while(1):
+			self.user_selection.reset()
+
+			view_prev_results = input("Do you want to view previous results? [n]/y (Ctrl-C to exit):")
+
+			if(view_prev_results in yes):
+				self.view_results()
+			elif(view_prev_results in no):
+				self.course_selection()
+				print( self.user_selection.courses )
+				p.print_break()
+				self.metric_selection()
+				p.print_break()
+				self.grade_selection()
+				p.print_break()
+				self.weight_selection()
+				p.print_break()
+				self.generate_results()
+				self.user_selection.print_results()
+				self.user_selection.save_results()
+			else:
+				print("Select yes or no")
 
