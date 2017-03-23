@@ -3,19 +3,39 @@ import api_connector as api
 import textwrap
 import random
 import operator
+import json
+import os
+import time
 
 from util import *
 
 class UserSelection:
-	def __init__(self, name="UserSelection"):
+	def __init__(self, name="UserSelection", save_directory = "tmp"):
 		self.courses = {} # Empty == All Courses
 		self.metrics = [] # Empty == All metrics
 		self.include_grades = False
 		self.weights = [] # Weights of each metrics (sums to 1)
 		self.results = {}
+		self.save_directory = "tmp"
 
 	def save_results(self):
-		pass
+		if not os.path.exists(self.save_directory):
+		    os.makedirs(self.save_directory)
+
+
+		data = {
+			"courses":self.courses,
+			"metrics":self.metrics,
+			"includes_grades":self.include_grades,
+			"weights":self.weights,
+			"results":self.results
+		}
+
+		timestr = time.strftime("%Y%m%d-%H%M%S")
+		filename = self.save_directory +"/" + "results_" + timestr
+
+		with open(filename, 'w') as outfile:
+			json.dump(data, outfile)
 
 	def get_average_metrics(self):
 
@@ -67,7 +87,11 @@ class UserSelection:
 
 		sorted_totals = self.sort_totals()
 
-		columns = self.metrics
+		column_names = []
+		for i in range(0, len(self.metrics)):
+			column_names.append(self.metrics[i] + " (" + str(self.weights[i]) + ")")
+		columns = column_names
+
 		columns.append("TOTAL")
 
 		r_format = "{:>25}" * (len(columns) + 1)
@@ -81,7 +105,10 @@ class UserSelection:
 			print( r_format.format(self.courses[course][0:15] + ":" + course, *row) )
 
 	def load_results(self, file):
-		pass
+		with open(filename) as infile:
+			data = json.load(infile)
+
+
 
 
 class Selector:
@@ -423,3 +450,4 @@ class Selector:
 		self.generate_results()
 		self.user_selection.print_results()
 		self.user_selection.save_results()
+
