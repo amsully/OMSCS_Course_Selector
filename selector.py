@@ -303,6 +303,7 @@ class Selector:
 					print("Not a valid number")
 					break
 
+			tot = round(tot,3) # handle floating points
 			if(tot == 1. and len(weights) == len(metrics)):
 				print("You selected:" )
 				for i in range(0, len(metrics)):
@@ -457,8 +458,6 @@ class Selector:
 	def view_results(self, path="tmp/"):
 
 		onlyfiles = [f for f in listdir(path) if isfile(join(path, f))]
-		print(onlyfiles)
-
 		for i in range(0, len(onlyfiles)):
 			print(str(i) + ": " +onlyfiles[i])
 
@@ -491,9 +490,10 @@ class Selector:
 
 			if(view_prev_results in yes):
 				self.view_results()
+				p.print_break()
+
 			elif(view_prev_results in no):
 				self.course_selection()
-				print( self.user_selection.courses )
 				p.print_break()
 				self.metric_selection()
 				p.print_break()
@@ -504,6 +504,7 @@ class Selector:
 				self.generate_results()
 				self.user_selection.print_results()
 				self.user_selection.save_results()
+				p.print_break()
 			else:
 				print("Select yes or no")
 
