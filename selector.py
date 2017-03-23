@@ -2,11 +2,13 @@ import printer as p
 import api_connector as api
 import textwrap
 import random
+import operator
+
 from util import *
 
 class UserSelection:
 	def __init__(self, name="UserSelection"):
-		self.courses = [] # Empty == All Courses
+		self.courses = {} # Empty == All Courses
 		self.metrics = [] # Empty == All metrics
 		self.include_grades = False
 		self.weights = [] # Weights of each metrics (sums to 1)
@@ -15,23 +17,68 @@ class UserSelection:
 	def save_results(self):
 		pass
 
-	def sort_results(self):
-		pass
+	def get_average_metrics(self):
+
+		tot_results = [0. for i in range(0, len(self.metrics))]
+		cnt_results = [0  for i in range(0, len(self.metrics))]
+
+		for course in self.results:
+
+			for i in range(0, len(self.results[course])):
+				rew = self.results[course][i]
+
+				if(rew == None):
+					continue
+				else:
+					tot_results[i] += rew
+					cnt_results[i] += 1
+
+		return [tot_results[i]/cnt_results[i] for i in range(0, len(tot_results))]
+
+
+
+	def sort_totals(self):
+
+		total_res = {}
+
+		# get average of each metric
+		average_metrics = self.get_average_metrics()
+
+		# sum metrics and add average to none metrics
+		result_totals = {}
+		for course in self.results:
+			course_total = 0
+			for i in range(0, len(self.metrics)):
+				rew = self.results[course][i]
+
+				# None, add average of this metric
+				if(rew == None):
+					course_total += average_metrics[i]
+				else:
+					course_total += rew
+
+			result_totals[course] = course_total
+
+		sorted_totals = sorted(result_totals.items(), key=operator.itemgetter(1), reverse = True)
+
+		return sorted_totals
 
 	def print_results(self):
 
-		# sorted_results = self.sort_results()
+		sorted_totals = self.sort_totals()
 
-		# columns = self.metrics
+		columns = self.metrics
+		columns.append("TOTAL")
 
-		# r_format = "{:>15}" * (len(columns) + 1)
-		# print( r_format.format("", *columns))
+		r_format = "{:>25}" * (len(columns) + 1)
+		print( r_format.format("", *columns))
 
-		# for course in self.results:
-		# 	row = [str(round(res,2)) for res in self.results[course]]
+		for course,score in sorted_totals:
+			row_results = self.results[course]
+			row_results.append(score)
+			row = [ "None (avg)" if res == None else str(round(res,2)) for res in row_results]
 
-		# 	print( r_format.format(course, *row) )
-		pass
+			print( r_format.format(self.courses[course][0:15] + ":" + course, *row) )
 
 	def load_results(self, file):
 		pass
@@ -86,7 +133,13 @@ class Selector:
 				
 			user_happy = prompt_correct()
 
-		self.user_selection.courses = course_numbers
+		# Include names
+		user_selection_courses = {}
+		for course in course_numbers:
+			user_selection_courses[course] = self.course_CRS[course]["name"]
+
+		self.user_selection.courses = user_selection_courses
+
 
 	def course_selection(self):
 		if(self.course_CRS == None):
@@ -271,7 +324,6 @@ class Selector:
 		total_grade = 0.
 		grade_count = 0.
 
-
 		for term in grades: # Each term
 			term_grades = grades[term]
 			for g in term_grades: # Each grade
@@ -294,8 +346,9 @@ class Selector:
 		def workload(weight, value):
 			return 1. * weight * value * self.workload_scale()
 
+		# Higher ratings are good!
 		def rating(weight, value):
-			return 1. * weight * value
+			return  self.max_value_range - ( 1. * weight * value )
 
 		def wt_times_val(weight, value):
 			return 1. * weight * value
