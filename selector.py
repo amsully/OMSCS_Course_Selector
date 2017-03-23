@@ -1,6 +1,5 @@
 import printer as p
 import api_connector as api
-import ranker
 import textwrap
 import random
 from util import *
@@ -11,17 +10,46 @@ class UserSelection:
 		self.metrics = [] # Empty == All metrics
 		self.include_grades = False
 		self.weights = [] # Weights of each metrics (sums to 1)
+		self.results = {}
+
+	def save_results(self):
+		pass
+
+	def sort_results(self):
+		pass
+
+	def print_results(self):
+
+		# sorted_results = self.sort_results()
+
+		# columns = self.metrics
+
+		# r_format = "{:>15}" * (len(columns) + 1)
+		# print( r_format.format("", *columns))
+
+		# for course in self.results:
+		# 	row = [str(round(res,2)) for res in self.results[course]]
+
+		# 	print( r_format.format(course, *row) )
+		pass
+
+	def load_results(self, file):
+		pass
+
 
 class Selector:
 
-	def __init__(self, name="MainSelector"):
+	def __init__(self, name="MainSelector", max_value_range = 5):
 		self.api = api.APIConnector()
 		self.name = name
 		self.course_CRS = None
 		self.course_AGG = None
 		self.course_GRD = None
 		self.user_selection = UserSelection()
-		self.ranker = ranker.Ranker()
+		self.scores = None
+		self.max_course_workload = None
+		self.max_value_range = max_value_range
+		self.grade_map = {"a":95,"b":85,"c":75,"d":65,"f":55}
 
 	def convert_to_courses(self, course_numbers, course_index_to_number):
 		courses = []
@@ -184,18 +212,147 @@ class Selector:
 					self.user_selection.weights = weights
 					valid_weights = True				
 
+	def get_metric_values(self, c, metrics):
+		if(self.course_AGG == None):
+			self.course_AGG == self.api.get("AGG")
+
+		values = []
+
+		course_agg = {}
+		avg = {}
+		try:
+			course_agg = self.course_AGG[c]
+			avg =  course_agg["average"]
+		except KeyError:
+			print(c + " does not have any aggregate information. Assigning 'None'.")
+			for m in metrics:
+				avg[m] = None
+	
+
+
+		if("grades" in metrics):
+			try:
+				avg["grades"] = self.course_GRD[c]
+			except KeyError:
+				print(c + " does not have any grade information. Assigning 'None'.")
+				avg["grades"] = None
+
+
+		for m in metrics:
+			values.append(avg[m])
+
+		return values
+
+	def max_workload(self):
+		if(self.course_AGG == None):
+			self.course_AGG = self.api.get("AGG")
+
+		if(self.max_course_workload == None):
+			max_workload = 0
+			for c in self.course_AGG:
+				workload = self.course_AGG[c]["average"]["workload"]
+				if( workload > max_workload):
+					max_workload = workload
+			self.max_course_workload = max_workload
+
+		return self.max_course_workload
+
+	def workload_scale(self):
+		if(self.course_AGG == None):
+			self.course_AGG = self.api.get("AGG")
+
+		if(self.max_course_workload == None):
+			self.max_course_workload = self.max_workload()
+
+		return self.max_value_range / self.max_course_workload
+
+
+	def grade_mean(self, grades):
+		total_grade = 0.
+		grade_count = 0.
+
+
+		for term in grades: # Each term
+			term_grades = grades[term]
+			for g in term_grades: # Each grade
+				if g in self.grade_map:
+					grade_count += term_grades[g]
+					total_grade += (term_grades[g] * self.grade_map[g])
+
+		return total_grade/grade_count
+
+
+	def get_metric_function(self, metric):
+
+		def grades(weight, value):
+
+			return (1.*self.max_value_range / self.grade_map['a']) * self.grade_mean(value) * weight
+
+		def difficulty(weight, value):
+			return weight * value
+
+		def workload(weight, value):
+			return 1. * weight * value * self.workload_scale()
+
+		def rating(weight, value):
+			return 1. * weight * value
+
+		def wt_times_val(weight, value):
+			return 1. * weight * value
+
+		if(metric == "grades"):
+			return grades
+		elif(metric == "difficulty"):
+			return difficulty
+		elif(metric == "workload"):
+			return workload
+		elif(metric == "rating"):
+			return rating
+		else:
+			print("Unknown metric: " + metric + ". Using 'weight * value'")
+			return wt_times_val
+
+
+	def score(self, metrics, weights, values):
+		assert(len(metrics) == len(weights))
+		assert(len(weights) == len(values))
+
+		results = []
+
+		for i in range(0, len(metrics)):
+			metric = metrics[i]
+			value  = values[i]
+			wt     = weights[i]
+
+			if(value == None):
+				print("    Metric " + metric + " is not available for this class. Assigning 'None'.")
+				results.append(None)
+			else:
+				metric_eval = self.get_metric_function(metric)
+				results.append(metric_eval(wt,value))
+
+		return results
+
+
+
 	def generate_results(self):
-		ranker = self.ranker
+		results = {} # course: score
 
 		metrics = self.user_selection.metrics
 		weights = self.user_selection.weights
 		courses = self.user_selection.courses
 
-		
+		assert(len(weights) == len(metrics))
 
+		for c in courses:
+			print("Scoring: " + c)
+			values = self.get_metric_values(c, metrics)
+
+			results[c] = self.score(metrics, weights, values)
+
+		self.user_selection.results = results
 
 	def run(self):
-		selector = Selector()
 
 		p.print_break()
 		print ("Feel free to contribute at: https://github.com/amsully/OMSCS_Course_Selector")
@@ -211,3 +368,5 @@ class Selector:
 		self.weight_selection()
 		p.print_break()
 		self.generate_results()
+		self.user_selection.print_results()
+		self.user_selection.save_results()
