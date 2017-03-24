@@ -21,6 +21,13 @@ All testing performed with python 3.6 on macOS.
 
 ### How to Use:
 
+Install requests module if not already installed:
+
+```
+pip install requests
+```
+
+Run code
 ```
 git clone https://github.com/amsully/OMSCS_Course_Selector.git
 
