@@ -18,8 +18,14 @@ python 3, requests library
 
 ### How to Use:
 
-```git clone https://github.com/amsully/OMSCS_Course_Selector.git```
+```
+git clone https://github.com/amsully/OMSCS_Course_Selector.git
 
-``` cd OMSCS_Course_Selector```
+cd OMSCS_Course_Selector
 
-```python run.py```
+python run.py
+```
+
+### Contribute
+
+I whipped this up so if you notice an egregious errors add an issue or submit a pull request. Thanks!
