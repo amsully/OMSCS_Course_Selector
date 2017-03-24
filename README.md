@@ -10,7 +10,8 @@ Not sure which class to take? Allow this script to do the thinking for you!
 3. Weight each metric based on what you value for your upcoming semester. 
 4. The script pulls the data from https://omscentral.com/, normalizes the data and returns a ranking!
 
-Results are saved in a local directory and can be viewed later
+Results are saved in a local directory and can be viewed later. This script inverts difficulty and workload for you. The lower the difficulty and workload the higher the value is.
+
 
 ### Requirements:
 
