@@ -17,6 +17,8 @@ Results are saved in a local directory and can be viewed later. This script inve
 
 python 3, requests library
 
+All testing performed with python 3.6 on macOS.
+
 ### How to Use:
 
 ```
