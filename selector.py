@@ -390,15 +390,16 @@ class Selector:
 
 			return (1.*self.max_value_range / self.grade_map['a']) * self.grade_mean(value) * weight
 
+		# Higher difficulty is bad!
 		def difficulty(weight, value):
-			return weight * value
+			return weight * (self.max_value_range - value)
 
 		def workload(weight, value):
-			return 1. * weight * value * self.workload_scale()
+			return 1. * weight * (self.max_value_range - value * self.workload_scale())
 
 		# Higher ratings are good!
 		def rating(weight, value):
-			return  self.max_value_range - ( 1. * weight * value )
+			return ( 1. * weight * value )
 
 		def wt_times_val(weight, value):
 			return 1. * weight * value
