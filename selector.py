@@ -281,6 +281,7 @@ class Selector:
 	def weight_selection(self):
 
 		valid_weights = False
+
 		metrics = self.weight_selection_metrics_helper() 
 
 		while(not valid_weights):
@@ -325,7 +326,7 @@ class Selector:
 		avg = {}
 		try:
 			course_agg = self.course_AGG[c]
-			avg =  course_agg["average"]
+			avg =  course_agg["average"].copy() # Value Copy
 		except KeyError:
 			print(c + " does not have any aggregate information. Assigning 'None'.")
 			for m in metrics:
