@@ -1,4 +1,7 @@
 # OMSCS_Course_Selector
+
+[CAUTION] A new developer has taken ownership of omscentral.com. API's may have been changed resulting in needed modifications of this code.
+
 Not sure which class to take? Allow this script to do the thinking for you!
 
 ![alt text](https://github.com/amsully/OMSCS_Course_Selector/blob/master/omscs_selector.gif "Selector use case")
